@@ -36,9 +36,9 @@ WORKDIR /home/pebble
 # Install uv (Python package installer)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Set PEBBLE_HOME to shared location and add tools to PATH
+# Add uv to PATH and set PEBBLE_HOME for SDK installation
+ENV PATH="/home/pebble/.local/bin:${PATH}"
 ENV PEBBLE_HOME="/opt/pebble-sdk"
-ENV PATH="/home/pebble/.local/bin:/opt/pebble-sdk/SDKs/current/toolchain/arm-none-eabi/bin:${PATH}"
 
 # Install pebble-tool (includes all dependencies like pypkjs, sh, etc.)
 RUN uv tool install pebble-tool
@@ -46,10 +46,14 @@ RUN uv tool install pebble-tool
 # Install the latest Pebble SDK to shared location
 RUN pebble sdk install latest
 
-# Make the SDK readable by all users
+# Make the SDK and tools readable/executable by all users
 USER root
 RUN chmod -R a+rX /opt/pebble-sdk && \
     chmod -R a+rX /home/pebble/.local
+
+# Add entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Switch back to pebble user as default
 USER pebble
@@ -57,6 +61,6 @@ USER pebble
 # Set the working directory for builds
 WORKDIR /pebble
 
-# Default command - run pebble build
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["pebble", "build"]
 
