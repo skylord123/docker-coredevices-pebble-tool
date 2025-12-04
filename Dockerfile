@@ -22,24 +22,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user for building
+# Create pebble-sdk directory that's accessible to all users
+# This allows running with --user flag for CI environments
+RUN mkdir -p /opt/pebble-sdk && chmod 777 /opt/pebble-sdk
+
+# Create a non-root user for installation
 RUN useradd -m -d /home/pebble -s /bin/bash pebble
 
-# Switch to pebble user
+# Switch to pebble user for installation
 USER pebble
 WORKDIR /home/pebble
 
 # Install uv (Python package installer)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Add uv and pebble SDK toolchain to PATH
-ENV PATH="/home/pebble/.local/bin:/home/pebble/.pebble-sdk/SDKs/current/toolchain/arm-none-eabi/bin:${PATH}"
+# Set PEBBLE_HOME to shared location and add tools to PATH
+ENV PEBBLE_HOME="/opt/pebble-sdk"
+ENV PATH="/home/pebble/.local/bin:/opt/pebble-sdk/SDKs/current/toolchain/arm-none-eabi/bin:${PATH}"
 
 # Install pebble-tool (includes all dependencies like pypkjs, sh, etc.)
 RUN uv tool install pebble-tool
 
-# Install the latest Pebble SDK
+# Install the latest Pebble SDK to shared location
 RUN pebble sdk install latest
+
+# Make the SDK readable by all users
+USER root
+RUN chmod -R a+rX /opt/pebble-sdk && \
+    chmod -R a+rX /home/pebble/.local
+
+# Switch back to pebble user as default
+USER pebble
 
 # Set the working directory for builds
 WORKDIR /pebble
