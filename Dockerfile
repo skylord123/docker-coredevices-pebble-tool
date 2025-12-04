@@ -41,10 +41,10 @@ RUN uv tool install pebble-tool
 # Install the latest Pebble SDK
 RUN pebble sdk install latest
 
-# Make the SDK and tools readable/executable by all users
+# Make the SDK and tools accessible by all users
 # This allows running with --user flag for CI environments
 USER root
-RUN chmod -R a+rX /home/pebble/.pebble-sdk && \
+RUN chmod -R a+rwX /home/pebble/.pebble-sdk && \
     chmod -R a+rX /home/pebble/.local
 
 # Add entrypoint script
