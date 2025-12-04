@@ -22,10 +22,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Create pebble-sdk directory that's accessible to all users
-# This allows running with --user flag for CI environments
-RUN mkdir -p /opt/pebble-sdk && chmod 777 /opt/pebble-sdk
-
 # Create a non-root user for installation
 RUN useradd -m -d /home/pebble -s /bin/bash pebble
 
@@ -36,19 +32,19 @@ WORKDIR /home/pebble
 # Install uv (Python package installer)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Add uv to PATH and set PEBBLE_HOME for SDK installation
+# Add uv to PATH
 ENV PATH="/home/pebble/.local/bin:${PATH}"
-ENV PEBBLE_HOME="/opt/pebble-sdk"
 
 # Install pebble-tool (includes all dependencies like pypkjs, sh, etc.)
 RUN uv tool install pebble-tool
 
-# Install the latest Pebble SDK to shared location
+# Install the latest Pebble SDK
 RUN pebble sdk install latest
 
 # Make the SDK and tools readable/executable by all users
+# This allows running with --user flag for CI environments
 USER root
-RUN chmod -R a+rX /opt/pebble-sdk && \
+RUN chmod -R a+rX /home/pebble/.pebble-sdk && \
     chmod -R a+rX /home/pebble/.local
 
 # Add entrypoint script
