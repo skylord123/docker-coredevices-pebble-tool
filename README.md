@@ -49,32 +49,52 @@ You can add a target to your project's Makefile for easy Docker builds:
 
 ```makefile
 DOCKER_IMAGE = ghcr.io/skylord123/docker-coredevices-pebble-tool:latest
+DOCKER_RUN = docker run --rm -v $(shell pwd):/pebble \
+	--user $(shell id -u):$(shell id -g) \
+	-e HOME=/tmp \
+	$(DOCKER_IMAGE)
 
 docker-build:
-	docker run --rm -v $(shell pwd):/pebble $(DOCKER_IMAGE)
+	$(DOCKER_RUN)
 
 docker-clean:
-	docker run --rm -v $(shell pwd):/pebble $(DOCKER_IMAGE) pebble clean
+	$(DOCKER_RUN) pebble clean
+
+# Interactive shell for development
+docker:
+	docker run --rm -it -v $(shell pwd):/pebble $(DOCKER_IMAGE) /bin/bash
 ```
+
+The `--user` flag ensures files created in the build directory are owned by your user, and `-e HOME=/tmp` provides a writable home directory for pebble-tool's settings.
 
 ## Usage in GitHub Actions
 
 ```yaml
+name: Build Pebble app
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/skylord123/docker-coredevices-pebble-tool:latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build Pebble app
-        run: pebble build
+      
+      - name: Build with Docker
+        run: make docker-build
+      
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: pebble-app
           path: build/*.pbw
 ```
+
+This assumes you have a `Makefile` with the `docker-build` target shown above.
 
 ## Building the Image Locally
 
@@ -83,13 +103,6 @@ git clone https://github.com/skylord123/docker-coredevices-pebble-tool.git
 cd docker-coredevices-pebble-tool
 docker build -t pebble-tool .
 ```
-
-## Image Tags
-
-- `latest` - Latest build from the main branch
-- `vX.Y.Z` - Semantic version releases
-- `YYYYMMDD` - Weekly scheduled builds (Sundays)
-- `<sha>` - Specific commit builds
 
 ## License
 
